@@ -1,6 +1,7 @@
 package rewriter
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -89,15 +90,23 @@ func (f *File) Close() error {
 }
 
 // Abort deletes the temp file and closes the input file without modification.
+// It is an error to call this more than once, or after calling Close()
+// as it won't do what you wanted it to.
 func (f *File) Abort() error {
+	if f.input == nil || f.output == nil || f.tempfile == "" {
+		return fmt.Errorf("unable to abort %s -- already closed", f.filename)
+	}
 	err := f.input.Close()
+	f.input = nil
 	if err != nil {
 		return err
 	}
 	err = f.output.Close()
+	f.output = nil
 	if err != nil {
 		return err
 	}
 	err = os.Remove(f.tempfile)
+	f.tempfile = ""
 	return err
 }
