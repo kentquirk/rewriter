@@ -22,7 +22,14 @@ type File struct {
 	output   io.WriteCloser
 }
 
+// Aborter allows you to tell if a File object you're holding
+// implements the Abort feature.
+type Aborter interface {
+	Abort() error
+}
+
 var _ io.ReadWriteCloser = (*File)(nil)
+var _ Aborter = (*File)(nil)
 
 // New returns an object that reads from the input
 // file and writes to a temporary file.
