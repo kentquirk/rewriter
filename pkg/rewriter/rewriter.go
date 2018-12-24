@@ -70,11 +70,21 @@ func (f *File) Write(b []byte) (int, error) {
 }
 
 // Close implements the io.Closer interface
+// Because people might call it twice (once each for in/out)
+// we want it to be harmless after the first time.
 func (f *File) Close() error {
-	// even if the close attempts fail, we want to continue
-	_ = f.input.Close()
-	_ = f.output.Close()
-	os.Rename(f.tempfile, f.filename)
+	if f.input != nil {
+		_ = f.input.Close()
+		f.input = nil
+	}
+	if f.output == nil {
+		_ = f.output.Close()
+		f.output = nil
+	}
+	if f.tempfile != "" {
+		os.Rename(f.tempfile, f.filename)
+		f.tempfile = ""
+	}
 	return nil
 }
 
