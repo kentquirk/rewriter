@@ -4,7 +4,7 @@ The rewriter package is designed to make it easy to write filters that operate o
 
 It creates an object that reads from the input file and writes to a temporary file.
 
-When you call Close(), both files are closed, the input is moved to the temp directory, and the output replaces it.
+When you call Close(), both files are closed and the output replaces the input.
 
 If you call Abort(), the output file is deleted and the input file is unaffected.
 

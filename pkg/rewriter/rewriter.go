@@ -6,13 +6,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+
+	"github.com/pkg/errors"
 )
 
 // File is the base type of an object that reads from the input
 // file and writes to a temporary file.
 // When you call Close(), both files are closed,
-// the input is moved to the temp directory, and the output
-// replaces it.
+// and the output replaces the input.
 // If you call Abort(), the output file is deleted and the
 // input file is unaffected.
 // The object returned implements io.ReadWriteCloser.
@@ -34,11 +35,6 @@ var _ Aborter = (*File)(nil)
 
 // New returns an object that reads from the input
 // file and writes to a temporary file.
-// When you call Close(), both files are closed,
-// the input is moved to the temp directory, and the output
-// replaces it.
-// If you call Abort(), the output file is deleted and the
-// input file is unaffected.
 // The File object returned implements io.ReadWriteCloser.
 func New(inputFile string) (*File, error) {
 	input, err := os.Open(inputFile)
@@ -74,16 +70,24 @@ func (f *File) Write(b []byte) (int, error) {
 // Because people might call it twice (once each for in/out)
 // we want it to be harmless after the first time.
 func (f *File) Close() error {
+	// close both files
 	if f.input != nil {
-		_ = f.input.Close()
+		if err := f.input.Close(); err != nil {
+			return errors.Wrap(err, "closing rewriter input")
+		}
 		f.input = nil
 	}
-	if f.output == nil {
-		_ = f.output.Close()
+	if f.output != nil {
+		if err := f.output.Close(); err != nil {
+			return errors.Wrap(err, "closing rewriter output")
+		}
 		f.output = nil
 	}
+	// and now move the tempfile over the original
 	if f.tempfile != "" {
-		os.Rename(f.tempfile, f.filename)
+		if err := os.Rename(f.tempfile, f.filename); err != nil {
+			return errors.Wrap(err, "renaming rewriter files")
+		}
 		f.tempfile = ""
 	}
 	return nil
